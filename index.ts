@@ -1,8 +1,9 @@
 "use strict";
 
-import { Resolver } from "dns/promises"
 import pMap from 'p-map'
 import ptr from './ptr'
+
+const { Resolver } = require('dns');
 
 const CISCO_OPEN_DNS = `208.67.220.220`
 const DEFAULT_TIMEOUT = 5000 // 5 seconds
@@ -13,6 +14,19 @@ type Options = {
   servers: string[];
   concurrency: number;
   includeTxt: boolean;
+}
+
+type Item = {
+  blacklist: string;
+  address: string;
+
+  listed?: boolean;
+  txt?: string[][];
+}
+
+export type Resposne = {
+  listed: boolean;
+  txt: string[][]
 }
 
 const defaults = {
@@ -28,7 +42,7 @@ const noop = ():Promise<string[][]> => new Promise((res, rej) => {
   res(s)
 })
 
-const query = (addr:string, blacklist:string, opts:Partial<Options> = defaults) =>
+const query = (addr:string, blacklist:string, opts:Partial<Options> = defaults):Promise<Resposne> =>
 new Promise(async (resolve, reject) => {
   const servers:string[] = opts.servers ? Array.isArray(opts.servers) ? opts.servers : [opts.servers] : []
   const resolver = new Resolver()
@@ -38,7 +52,7 @@ new Promise(async (resolve, reject) => {
 
   const timeout = setTimeout(() => {
     resolver.cancel();
-    resolve(opts.includeTxt ? {listed: false, txt: []} : false)
+    resolve({listed: false, txt: []})
   }, opts.timeout);
 
   try {
@@ -50,25 +64,21 @@ new Promise(async (resolve, reject) => {
     clearTimeout(timeout);
 
     const listed = Boolean(addrs.length);
-    resolve(opts.includeTxt ? {listed, txt} : listed)
+    resolve(opts.includeTxt ? {listed, txt} : {listed, txt:[]})
   } catch (err) {
-    resolve(opts.includeTxt ? {listed: false, txt: []} : false)
+    resolve({listed: false, txt: []})
   }
 })
 
-export const lookup = async (addr:string, blacklist:string, opts:Partial<Options> = defaults) => {
-  opts = Object.assign({}, defaults, opts);
-  const result = await query(addr, blacklist, opts);
-  return result;
+export const lookup = async (addr:string, blacklist:string) => {
+  const result = await query(addr, blacklist, defaults);
+  return result.listed;
 };
 
-type Item = {
-  blacklist: string;
-  address: string;
-
-  listed?: boolean;
-  txt?: string[][];
-}
+export const lookupWithTxt = async (addr:string, blacklist:string) => {
+  const result = await query(addr, blacklist, {...defaults, includeTxt:  true});
+  return result;
+};
 
 export const batch = async (addrs:string, lists:string[], opts:Partial<Options> = defaults) => {
   opts = Object.assign({}, defaults, opts);
@@ -86,18 +96,15 @@ export const batch = async (addrs:string, lists:string[], opts:Partial<Options> 
   }, {concurrency});
 
   return items.map((item, i) => {
-    if (opts.includeTxt!) {
-      const result = results[i] as Item
-      item.listed = result.listed;
-      item.txt = result.txt;
-    } else {
-      item.listed = results[i] as boolean;
-    }
+    const result = results[i] as Item
+    item.listed = result.listed;
+    item.txt = result.txt;
     return item;
   });
 };
 
 export default {
   lookup,
+  lookupWithTxt,
   batch
 }

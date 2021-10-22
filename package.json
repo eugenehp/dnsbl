@@ -1,14 +1,15 @@
 {
   "name": "@ehp/dnsbl",
-  "version": "0.0.3",
+  "version": "0.0.12",
   "description": "Query DNS-based blackhole lists",
   "license": "MIT",
   "author": "Eugene Hauptmann <e@eugenehp.de>",
   "main": "dist/index.js",
   "repository": "eugenehp/dnsbl",
-  "types": "index.d.ts",
+  "types": "./dist/index.d.ts",
   "scripts": {
-    "prepublish": "tsc"
+    "prepublish": "tsc",
+    "p": "npm publish --access public"
   },
   "engines": {
     "node": "~10.15.0" 
@@ -24,11 +25,8 @@
     "blacklist",
     "blackhole"
   ],
-  "files": [
-    "./dist/index.js"
-  ],
+  "files": ["dist/*", "*"],
   "dependencies": {
-    "dns": "^0.2.2",
     "ipaddr.js": "^2.0.1",
     "p-map": "^3.0.0",
     "util": "^0.12.4"
