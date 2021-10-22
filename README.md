@@ -1,4 +1,4 @@
-# dnsbl
+# @ehp/dnsbl
 
 Query DNS-based blackhole lists
 

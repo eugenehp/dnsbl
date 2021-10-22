@@ -1,6 +1,6 @@
 {
   "name": "@ehp/dnsbl",
-  "version": "0.0.1",
+  "version": "0.0.3",
   "description": "Query DNS-based blackhole lists",
   "license": "MIT",
   "author": "Eugene Hauptmann <e@eugenehp.de>",
@@ -9,6 +9,9 @@
   "types": "index.d.ts",
   "scripts": {
     "prepublish": "tsc"
+  },
+  "engines": {
+    "node": "~10.15.0" 
   },
   "keywords": [
     "dnsbl",
