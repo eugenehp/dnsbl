@@ -1,9 +1,9 @@
 "use strict";
 
+import { Resolver } from 'dns';
 import pMap from 'p-map'
+import { promisify } from 'util';
 import ptr from './ptr'
-
-const { Resolver } = require('dns');
 
 const CISCO_OPEN_DNS = `208.67.220.220`
 const DEFAULT_TIMEOUT = 5000 // 5 seconds
@@ -24,7 +24,7 @@ type Item = {
   txt?: string[][];
 }
 
-export type Resposne = {
+export type Response = {
   listed: boolean;
   txt: string[][]
 }
@@ -42,23 +42,26 @@ const noop = ():Promise<string[][]> => new Promise((res, rej) => {
   res(s)
 })
 
-const query = (addr:string, blacklist:string, opts:Partial<Options> = defaults):Promise<Resposne> =>
+const query = (addr:string, blacklist:string, opts:Partial<Options> = defaults):Promise<Response> =>
 new Promise(async (resolve, reject) => {
   const servers:string[] = opts.servers ? Array.isArray(opts.servers) ? opts.servers : [opts.servers] : []
   const resolver = new Resolver()
   resolver.setServers(servers);
 
+  const resolve4 = promisify(resolver.resolve4.bind(resolver))
+  const resolveTxt = promisify(resolver.resolveTxt.bind(resolver))
+
   const name = ptr(addr).replace(/\.i.+/, "") + "." + blacklist;
 
   const timeout = setTimeout(() => {
     resolver.cancel();
-    resolve({listed: false, txt: []})
+    opts.includeTxt ? resolve({listed: false, txt: []}) : noop()
   }, opts.timeout);
 
   try {
     const [addrs, txt] = await Promise.all([
-      resolver.resolve4(name),
-      opts.includeTxt ? resolver.resolveTxt(name) : noop(),
+      resolve4(name),
+      resolveTxt(name),
     ]);
 
     clearTimeout(timeout);
